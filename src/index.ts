@@ -32,7 +32,7 @@ app.use(express.json());
 // on peut utiliser app.get, app.post, app.put, app.delete, etc.. ()
 
 // on définit une route GET /todos, et la fonction qui s'exécute lorsque le serveur reçoit une requête qui matche
-app.get("/todos", (request: express.Request, result: express.Response) => {
+app.get("/todos", (request, result) => {
   console.log(`route "/todos" called`);
   return result.status(200).json(todos);
 });
@@ -48,7 +48,8 @@ app.get("/todos/:id", (request: express.Request, result: express.Response) => {
     );
 });
 
-app.put("/todos/:id", (req, res) => {
+app.put("/todos/:id", (req: express.Request, res: express.Response) => {
+  console.log(`put "/todos/:id" called`);
   const id = Number(req.params.id);
   const index = todos.findIndex((todo) => todo.todoId === id);
   if (index === -1) {
@@ -59,13 +60,14 @@ app.put("/todos/:id", (req, res) => {
   }
 });
 
-app.post("/todos", (req, res) => {
+app.post("/todos", (req: express.Request, res: express.Response) => {
   const newTodo = req.body;
   todos.push({ ...newTodo, todoId: todos.length + 1 });
+  console.log(newTodo)
   return res.status(200).json(newTodo);
 });
 
-app.delete("/todos/:id", (req, res) => {
+app.delete("/todos/:id", (req: express.Request, res: express.Response) => {
   const id = Number(req.params.id);
   const index = todos.findIndex((todo) => todo.todoId === id);
   if (index === -1) {
