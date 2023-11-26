@@ -1,30 +1,7 @@
 import express from "express";
+import categoriesRouter from "./categories";
+import { query } from "./db";
 
-var mysql = require("mysql");
-
-var con = mysql.createConnection({
-  host: "localhost",
-  user: 'todo',
-  password: 'todo',
-  port: 6603,
-  database: "DBtodo"
-});
-
-con.connect(function(err: any) {
-  if (err) throw err;
-  console.log("Connected!");
-});
-
-const query = async (query: string): Promise<any> =>
-  new Promise((resolve, reject) => {
-    con.query(query, (error: any, results: unknown, fields: any) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(results);
-      }
-    });
-});
 
 const todos = [
   {
@@ -65,6 +42,7 @@ const app = express();
 
 // on précise à l'application qu'elle doit parser le body des requêtes en JSON (utilisation d'un middleware)
 app.use(express.json());
+app.use("/categories", categoriesRouter);
 
 // on peut utiliser app.get, app.post, app.put, app.delete, etc.. ()
 
@@ -77,36 +55,44 @@ app.get("/todos", async (request, result) => {
 });
 
 // une autre route pour récupérer 1 TODO
-app.get("/todos/:id", (request: express.Request, result: express.Response) => {
+app.get("/todos/:id", async (request: express.Request, result: express.Response) => {
   console.log(`route "/todos/:id" called`);
   console.log(`params of the request : ${JSON.stringify(request.params)}`);
+  const todoDB = await query(`SELECT * FROM todos WHERE id = ${request.params.id}`);
+  console.log(todoDB)
   return result
     .status(200)
     .json(
-      todos.find((todo) => todo.todoId === Number(request.params.id)) || null,
+      todoDB || null,
     );
 });
 
 app.put("/todos/:id", async (req: express.Request, res: express.Response) => {
-  console.log(`put "/todos/:id" called`, req.body);
   const id = Number(req.params.id);
-  const todo = await query(`UPDATE todos SET text = '${req.body.text}', done = ${Boolean(req.body.done)} WHERE id = ${id}`);
+  console.log(`put "/todos/:id" called`, req.body, id);
+  const text = req.body.text.replaceAll("'", "\\'");
+  const todo = await query(`UPDATE todos SET text = "${text}", done = ${Boolean(req.body.done)} WHERE id = ${id}`);
+  return res.status(200).json({status: 'OK'})
 });
 
-app.post("/todos", (req: express.Request, res: express.Response) => {
+app.post("/todos", async (req: express.Request, res: express.Response) => {
   const newTodo = req.body;
-  todos.push({ ...newTodo, todoId: todos.length + 1 });
+  const lastTodoId = await query('SELECT MAX(id) as maxId FROM todos');
+  newTodo.id = lastTodoId[0].maxId + 1;
+
+  await query(`INSERT INTO todos (text, done, id_categorie) VALUES ('${String(newTodo.text)}',${Boolean(newTodo.done)}, ${Number(newTodo.category)})`)
   console.log(newTodo)
   return res.status(200).json(newTodo);
 });
 
-app.delete("/todos/:id", (req: express.Request, res: express.Response) => {
+app.delete("/todos/:id", async (req: express.Request, res: express.Response) => {
   const id = Number(req.params.id);
-  const index = todos.findIndex((todo) => todo.todoId === id);
-  if (index === -1) {
+  console.log('Route Delete called on id :', id)
+  const response = await query(`DELETE FROM todos WHERE id = ${id}`)
+  //const index = todos.findIndex((todo) => todo.todoId === id);
+  if (!response) {
     return res.status(404).json(null);
   } else {
-    todos.splice(index, 1);
     return res.status(200).json({ ok: true });
   }
 });
