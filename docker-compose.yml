@@ -1,0 +1,42 @@
+version: "3"
+
+services:
+  vue:
+    image: registry.digitalocean.com/syndr0m-registry/todo-list-app
+    ports:
+      - 80:80
+    networks:
+      - todo-list-app-network
+    depends_on:
+      - express
+  express:
+    image: registry.digitalocean.com/syndr0m-registry/todo-express-api
+    networks:
+      - todo-list-app-network
+      - todo-list-backend-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_PORT=${DB_PORT}
+  mysql:
+    image: registry.digitalocean.com/syndr0m-registry/todo-mysql
+    ports:
+      - 6603:3306
+    networks:
+      - todo-list-backend-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+networks:
+  todo-list-app-network:
+    driver: bridge
+  todo-list-backend-network:
+    driver: bridge
