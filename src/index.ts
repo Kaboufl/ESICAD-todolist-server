@@ -79,8 +79,9 @@ app.post("/todos", async (req: express.Request, res: express.Response) => {
   const newTodo = req.body;
   const lastTodoId = await query('SELECT MAX(id) as maxId FROM todos');
   newTodo.id = lastTodoId[0].maxId + 1;
+  const text = newTodo.text.replaceAll("'", "\\'");
 
-  await query(`INSERT INTO todos (text, done, id_categorie) VALUES ('${String(newTodo.text)}',${Boolean(newTodo.done)}, ${Number(newTodo.category)})`)
+  await query(`INSERT INTO todos (text, done, id_categorie) VALUES ('${String(text)}',${Boolean(newTodo.done)}, ${Number(newTodo.category)})`)
   console.log(newTodo)
   return res.status(200).json(newTodo);
 });
